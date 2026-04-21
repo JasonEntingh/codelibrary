@@ -28,7 +28,7 @@ library(nycflights13)
 
 ```{r import_csv}
 
-
+planes <- read_csv("data/planes.csv")
 
 ```
 
@@ -42,20 +42,24 @@ library(nycflights13)
 ```{r cleaning_duplicates}
 
 # get summary of duplicates
-your_data |> 
-  count(var1) |> 
+planes |> 
+  count(tailnum) |> 
   filter(n > 1)
 
 # find duplicates based on variables
-your_data |> 
-  group_by(var1, var2) |> 
+planes |> 
+  group_by(tailnum) |> 
   filter(n() > 1)
 
 # remove duplicates
-your_data |> 
-  distinct(var1, var2, .keep_all = TRUE)
+planes |> 
+  distinct(tailnum, .keep_all = TRUE)
 
+```
 
+## missing values
+
+```{r cleaning_missing}
 
 ```
 
