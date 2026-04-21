@@ -1,0 +1,65 @@
+---
+title: "Data Cleaning Checklist"
+author: "Jason Entingh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# setup
+
+## markdown setup
+
+```{r setup_markdown, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## library
+
+```{r setup_library}
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(nycflights13)
+```
+
+# import
+
+## import from csv
+
+```{r import_csv}
+
+
+
+```
+
+
+## import from xlsx
+
+# cleaning
+
+## duplicates
+
+```{r cleaning_duplicates}
+
+# get summary of duplicates
+your_data |> 
+  count(var1) |> 
+  filter(n > 1)
+
+# find duplicates based on variables
+your_data |> 
+  group_by(var1, var2) |> 
+  filter(n() > 1)
+
+# remove duplicates
+your_data |> 
+  distinct(var1, var2, .keep_all = TRUE)
+
+
+
+```
+
+
+# visualize
+
+# export
