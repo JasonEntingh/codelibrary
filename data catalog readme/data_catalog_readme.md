@@ -63,9 +63,9 @@ Email:
 
 The following diagram illustrates the flow of data from raw sources through transformation steps to the final dataset.
 
-```mermaid
+```{mermaid}
 graph TD
-    A[Raw Dataset A] --> C[Cleaned Dataset]
+    A[Raw Dataset A] -->|Clean Dataset| C[Cleaned Dataset]
     B[Raw Dataset B] --> C
     C --> D[Joined Dataset]
     E[External Dataset C] --> D
