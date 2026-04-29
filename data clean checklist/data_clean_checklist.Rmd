@@ -68,6 +68,27 @@ An explicit missing value is the presence of an absence.
 planes |> 
   summary()
 
+# summarize observations and missing counts for each variable
+planes |> 
+  summarise(across(everything(),
+                   list(
+                     n_obs = ~ length(.),
+                     n_missing = ~ sum(is.na(.))
+                   ))) |> 
+  pivot_longer(everything(),
+               names_to = c("variable", "stat"),
+               names_pattern = "(.*)_(n_obs|n_missing)",
+               values_to = "value") |> 
+  pivot_wider(names_from = stat, values_from = value)
+
+# if working with years, can then check if any particular year has a higher proportion of missing values for a particular variable
+planes |> 
+  group_by(year) |> 
+  summarize(
+    n = n(),
+    sum_missing = sum(is.na(speed))
+  )
+
 ```
 
 ### implicit
@@ -104,15 +125,108 @@ stocks |>
 
 ### missing data diagnostic
 
-Find a long dataset that I can use the missing data panel check on (what I made for DAF)
+The following code is a diagnostic built to detect patterns of missing data by year for each entity, such that each entity ends up in a matrix of the following:  
+* all NA: entity is missing all years of data  
+* complete: entity has all years of data  
+* leading only: entity is missing data only at the beginning (e.g. no data from 2019-2021, then data in 2022, 2023, and 2024) - candidate for backward factor imputation
+* internal only: entity is missing data 'holes' - candidate for interpolation/linear imputation  
+* trailing only: entity is missing data only at the end (e.g. only in 2024, or only in 2023-2024, or only in 2022-2024...) - candidate for forward factor imputation  
+* mixed: entity is missing data 'holes', and/or at the end, and/or at the beginning (e.g. missing data in 2022 and 2024, or missing data in 2021, 2023-2024)  
+
+Data needs to be complete (no implicit missing values) and in a long format.
 
 ```{r cleaning_missing_diagnostic}
 
+# get sample dataset
+library(plm)
+data("Grunfeld")
 
+# insert NAs
+set.seed(3)
+grunfeld_missing <- Grunfeld |> 
+  filter(year >= 1940 & year <= 1945)
+
+grunfeld_missing$value[sample(nrow(grunfeld_missing), 10)] <- NA
+
+summary(grunfeld_missing)
+
+# we can get a general idea of how much data is missing in each year by doing a simple summarize command
+grunfeld_missing |> 
+  group_by(year) |> 
+  summarize(
+    n = n(),
+    sum_missing = sum(is.na(value))
+  )
+
+grunfeld_missing_diagnostic <- grunfeld_missing |> 
+  arrange(firm, year) |> 
+  group_by(firm) |> 
+  mutate(
+    na_flag = is.na(value),
+    # identify leading NAs
+    leading_na = {
+      na_vec <- is.na(value)
+      # do not mark as leading if all values are missing
+      if (all(na_vec)) {
+        rep(FALSE, length(na_vec))
+      } else {
+      cumall(na_vec)
+      }
+    },
+    # identify trailing NA block
+    trailing_na = {
+      na_vec <- is.na(value)
+      # do not mark as trailing if all values are missing
+      if (all(na_vec)) {
+        rep(FALSE, length(na_vec))
+        # if all values not missing, go for it
+        # reverse logical flag so trailing years are first
+        # cumall() reads the na logic check, returning TRUE for TRUE, until it reads a FALSE value - after which it returns all FALSE. 
+        # reverse again.
+        # this lets us detect and mark NAs that are the trailing NAs of an entity 
+      } else {
+        rev(cumall(rev(na_vec)))
+      }
+    },
+    # internal NAs
+    internal_na = {
+      na_vec <- is.na(value)
+      # has non-NA before
+      has_before <- cumany(!na_vec)
+      # has a non-NA after
+      has_after <- rev(cumany(rev(!na_vec)))
+      # internal NA definition
+      na_vec & !trailing_na & has_before & has_after
+    },
+  ) |> 
+  ungroup() |> 
+  group_by(firm) |> 
+  mutate(
+    pattern = case_when(
+      # all NA - all values missing
+      all(is.na(value)) ~ "all NA",
+      # complete - all values nonmissing
+      all(!is.na(value)) ~ "complete",
+      # leading NAs - has leading NAs, and nonmissing values after.
+      any(leading_na) & !any(internal_na) & !any(trailing_na) ~ "leading_only",
+      # trailing only - has nonmissing from start, then all NAs after
+      any(trailing_na) & !any(internal_na) & !any(leading_na) ~ "trailing_only",
+      # internal only - has complete data from start, then has a data hole (of any size, as long as there's data after), and no trailing NAs.
+      !any(trailing_na) & any(internal_na) & !any(leading_na) ~ "internal_only",
+      # has a mix of trailing NAs, internal NAs, and leading NAs.
+      any(trailing_na) & any(internal_na) | any(trailing_na) & any(leading_na) | any(leading_na) & any(internal_na) ~ "mixed",
+      # the rest are EINs that closed at some point.
+      !any(leading_na) & !any(internal_na) & !any(trailing_na) & any(na_flag) ~ "closed"
+    )
+  ) |> 
+  ungroup() |> 
+  select(firm, year, value, na_flag:pattern)
+
+grunfeld_missing_diagnostic |> 
+  tabyl(pattern)
 
 
 ```
-
 
 ## logical consistency
 
