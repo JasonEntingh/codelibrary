@@ -20,22 +20,19 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 library(nycflights13)
+library(janitor)
 ```
 
-# import
+# cleaning checklist
 
-## import from csv
+## check data types
 
-```{r import_csv}
+```{r cleaning_datatypes}
 
-planes <- read_csv("data/planes.csv")
+planes |> 
+  glimpse()
 
 ```
-
-
-## import from xlsx
-
-# cleaning
 
 ## duplicates
 
@@ -59,11 +56,206 @@ planes |>
 
 ## missing values
 
-```{r cleaning_missing}
+### explicit
+
+Explicit missing values are those noted by the presence of an NA value. 
+
+An explicit missing value is the presence of an absence.
+
+```{r cleaning_missing_explicit}
+
+# simple summary
+planes |> 
+  summary()
+
+```
+
+### implicit
+
+Implicit missing values are those where an observation doesn't show up in the dataset.
+
+An implicit missing value is the absence of a presence.
+
+There are a couple of ways to handle this, via transforming implicit missing values to explicit missing values.
+* Pivoting data wider  
+* Using the `complete()` function  
+
+```{r cleaning_missing_implicit}
+
+# create sample dataframe
+stocks <- tibble(
+  year  = c(2020, 2020, 2020, 2020, 2021, 2021, 2021),
+  qtr   = c(   1,    2,    3,    4,    2,    3,    4),
+  price = c(1.88, 0.59, 0.35,   NA, 0.92, 0.17, 2.66)
+)
+
+# pivot wider
+stocks |>
+  pivot_wider(
+    names_from = qtr, 
+    values_from = price
+  )
+
+# complete function
+stocks |>
+  complete(year, qtr)
+
+```
+
+### missing data diagnostic
+
+Find a long dataset that I can use the missing data panel check on (what I made for DAF)
+
+```{r cleaning_missing_diagnostic}
+
+
+
 
 ```
 
 
-# visualize
+## logical consistency
 
-# export
+Be sure to check that related variables are consistent. Examples include:
+* date relationships (e.g. end_date > start_date)  
+* age vs birth year  
+* mutually exclusive fields  
+* conditional missingness  
+* range dependency on category  
+* total vs components  
+* binary flags vs counts  
+
+### validation function
+
+```{r cleaning_consistency_validationfunction}
+
+# this validation function was built using ChatGPT.
+## validation function
+validate_data <- function(df) {
+  df %>%
+    mutate(
+      # --- Date checks ---
+      check_date_order = if ("start_date" %in% names(.) & "end_date" %in% names(.)) {
+        end_date < start_date
+      } else FALSE,
+
+      # --- Age consistency ---
+      check_age = if ("age" %in% names(.) & "birth_year" %in% names(.)) {
+        abs(age - (as.numeric(format(Sys.Date(), "%Y")) - birth_year)) > 1
+      } else FALSE,
+
+      # --- Conditional missingness ---
+      check_car = if ("has_car" %in% names(.) & "car_model" %in% names(.)) {
+        has_car == TRUE & is.na(car_model)
+      } else FALSE,
+
+      # --- Logical consistency ---
+      check_children = if ("has_children" %in% names(.) & "num_children" %in% names(.)) {
+        has_children == FALSE & num_children > 0
+      } else FALSE,
+
+      # --- Totals check ---
+      check_total = if (all(c("total", "part_a", "part_b") %in% names(.))) {
+        total != part_a + part_b
+      } else FALSE
+    )
+}
+
+## summarize issues
+summarize_issues <- function(df_checked) {
+  df_checked %>%
+    summarise(across(starts_with("check_"), ~ sum(.x, na.rm = TRUE)))
+}
+
+## view problematic rows
+get_problem_rows <- function(df_checked) {
+  df_checked %>%
+    filter(if_any(starts_with("check_"), ~ .x))
+}
+
+## apply
+df_checked <- validate_data(df)
+
+# See counts of issues
+summarize_issues(df_checked)
+
+# Inspect bad rows
+bad_rows <- get_problem_rows(df_checked)
+
+
+
+```
+
+### R validate package
+
+```{r cleaning_consistency_validatepackage}
+
+# The Data Validation Cookbook: https://data-cleaning.github.io/validate/
+# github repo: https://github.com/data-cleaning/validate
+
+library(validate)
+
+# set rules
+rules <- validator(speed >= 200, 
+                   seats >= 200)
+
+# compare dataset to rules
+out <- confront(planes, rules)
+
+# see results
+summary(out)
+
+# visualize results
+plot(out)
+
+
+```
+
+## clean character values
+
+### check consistency of character values
+
+```{r cleaning_chr_consistency}
+# single variable
+planes |> 
+  tabyl(engine)
+
+```
+
+## clean numeric values
+
+### check outliers and distribution
+
+```{r cleaning_num_outliers}
+
+# simple summary
+planes |> 
+  summary()
+
+# box plots
+## boxplot function
+planes |> 
+  select(where(is.numeric)) |> 
+  map(~ boxplot(.x, main = deparse(substitute(.x))))
+
+## ggplot
+planes |> 
+  pivot_longer(cols = where(is.numeric)) |> 
+  ggplot(aes(y = value)) +
+  geom_boxplot() +
+  facet_wrap(~ name, scales = "free")
+
+# histogram
+## basic histogram
+planes |> 
+  select(where(is.numeric)) |> 
+  imap(~ hist(.x, main = .y, xlab = .y))
+
+## ggplot
+planes |> 
+  pivot_longer(cols = where(is.numeric)) |> 
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 30) +
+  facet_wrap(~ name, scales = "free")
+
+```
