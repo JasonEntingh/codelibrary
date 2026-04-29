@@ -225,7 +225,6 @@ grunfeld_missing_diagnostic <- grunfeld_missing |>
 grunfeld_missing_diagnostic |> 
   tabyl(pattern)
 
-
 ```
 
 ## logical consistency
@@ -296,8 +295,6 @@ summarize_issues(df_checked)
 # Inspect bad rows
 bad_rows <- get_problem_rows(df_checked)
 
-
-
 ```
 
 ### R validate package
@@ -322,7 +319,6 @@ summary(out)
 # visualize results
 plot(out)
 
-
 ```
 
 ## clean character values
@@ -330,6 +326,7 @@ plot(out)
 ### check consistency of character values
 
 ```{r cleaning_chr_consistency}
+
 # single variable
 planes |> 
   tabyl(engine)
