@@ -5,13 +5,82 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+# setup
+
+## markdown setup
+
+```{r setup_markdown, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## library
+
+```{r setup_library}
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(nycflights13)
+```
+
 # mutate
 
 ## across multiple variables
 
 ```{r mutate_across}
 
+# named variables
+## simple
+planes |> 
+  mutate(
+    across(
+      c(manufacturer, model),
+      tolower
+    )
+  )
 
+## explicit
+planes |> 
+  mutate(
+    across(
+      c(manufacturer, model),
+      ~ tolower(.x)
+    )
+  )
+
+# all [type] variables
+planes |> 
+  mutate(
+    across(
+      where(is.character),
+      tolower
+    )
+  )
+
+# beginning with 
+planes |> 
+  rename(
+    name_tailnum = tailnum,
+    name_manufacturer = manufacturer
+  ) |> 
+  mutate(
+    across(
+      starts_with("name"),
+      tolower
+    )
+  )
+
+# ending with 
+planes |> 
+  rename(
+    tailnum_name = tailnum,
+    manufacturer_name = manufacturer
+  ) |> 
+  mutate(
+    across(
+      ends_with("name"),
+      tolower
+    )
+  )
 
 ```
 
