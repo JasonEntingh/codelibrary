@@ -51,4 +51,4 @@ rsconnect/
 *.woff
 *.css
 *.js
-*.html
+data catalog readme/*.html
