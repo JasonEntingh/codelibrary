@@ -1,0 +1,17 @@
+---
+title: "R Code Library"
+author: "Jason Entingh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# mutate
+
+## across multiple variables
+
+```{r mutate_across}
+
+
+
+```
+
