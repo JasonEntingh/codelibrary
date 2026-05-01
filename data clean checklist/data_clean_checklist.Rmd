@@ -52,6 +52,17 @@ planes |>
 planes |> 
   distinct(tailnum, .keep_all = TRUE)
 
+# stop code if duplicates
+dup_check <- roster_data_raw |>
+  count(first_name, last_name) |>
+  filter(n > 1)
+
+if (nrow(dup_check) > 0) {
+  message("Duplicate first_name-last_name rows detected:")
+  print(dup_check)
+  stop("Panel key violation: first_name + last_name must be unique.")
+}
+
 ```
 
 ## missing values
@@ -80,6 +91,13 @@ planes |>
                names_pattern = "(.*)_(n_obs|n_missing)",
                values_to = "value") |> 
   pivot_wider(names_from = stat, values_from = value)
+
+# pull vector of variables with all missing values (easy to drop these later)
+missingvars <- planes |> 
+  # pull list of variables with all missing values
+  mutate(flag_allmissing = (n_obs == n_missing)) |> 
+  filter(flag_allmissing) |> 
+  pull(variable)
 
 # if working with years, can then check if any particular year has a higher proportion of missing values for a particular variable
 planes |> 
