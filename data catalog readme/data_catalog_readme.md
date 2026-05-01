@@ -74,11 +74,14 @@ graph TD
 
 # METHODOLOGICAL INFORMATION
 
-## Description of methods used for collection/generation of data: 
+## Data Collection
 *include links or references to publications or other documentation containing experimental design or protocols used in data collection*
 
-## Methods for processing the data: 
+## Data Processing
 *describe how the submitted data were generated from the raw or collected data*
+
+## Quality Assurance
+*describe processes for performing quality assurance on the data*
 
 ## Instrument- or software-specific information needed to interpret the data: 
 *include full name and version of software, and any necessary packages or libraries needed to run scripts*
